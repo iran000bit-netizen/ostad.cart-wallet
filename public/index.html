@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ostad – نمونه کارهای ارز دیجیتال</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a; --card: #131a2b; --border: #1f2a44; --text: #e6ecff;
+    --muted: #8b97b8; --accent: #f3ba2f; --accent2: #6c8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Vazirmatn', sans-serif; background: radial-gradient(1200px 600px at 80% -10%, #1a2340 0%, var(--bg) 60%); color: var(--text); min-height: 100vh; }
+  header { padding: 60px 20px 30px; text-align: center; }
+  header img { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--accent); box-shadow: 0 0 40px rgba(243,186,47,.35); }
+  header h1 { margin-top: 18px; font-size: 2.2rem; font-weight: 800; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); margin-top: 8px; }
+  .meta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .chip { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: .85rem; color: var(--muted); }
+  .chip b { color: var(--text); }
+  .toolbar { max-width: 1100px; margin: 0 auto 24px; padding: 0 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .toolbar input { flex: 1; min-width: 240px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 12px; font-family: inherit; font-size: 1rem; outline: none; }
+  .toolbar input:focus { border-color: var(--accent2); }
+  .grid { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: transform .2s, border-color .2s; display: flex; flex-direction: column; gap: 12px; }
+  .card:hover { transform: translateY(-4px); border-color: var(--accent); }
+  .top { display: flex; align-items: center; gap: 14px; }
+  .top img { width: 48px; height: 48px; border-radius: 50%; background: #000; }
+  .top h3 { font-size: 1.05rem; font-weight: 600; }
+  .top small { color: var(--accent); font-weight: 600; letter-spacing: .5px; }
+  .addr { font-family: monospace; font-size: .78rem; color: var(--muted); direction: ltr; text-align: left; background: #0d1322; padding: 8px 10px; border-radius: 8px; word-break: break-all; cursor: pointer; }
+  .addr:hover { color: var(--text); }
+  .info { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); }
+  .links { display: flex; gap: 8px; }
+  .links a { flex: 1; text-align: center; text-decoration: none; font-size: .82rem; padding: 8px; border-radius: 10px; background: #0d1322; color: var(--accent2); border: 1px solid var(--border); }
+  .links a:hover { background: var(--accent2); color: #fff; }
+  .status { text-align: center; color: var(--muted); padding: 40px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 10px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  footer { text-align: center; color: var(--muted); padding: 20px; font-size: .85rem; }
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<nav style="display:flex;justify-content:space-between;max-width:1100px;margin:0 auto;padding:20px">
+  <b>Ostad <span style="color:var(--accent)">Pay</span></b>
+  <div><a href="index.html" style="color:var(--accent);text-decoration:none;margin-right:16px">نمونه کارها</a><a href="pay.html" style="color:var(--accent2);text-decoration:none">درگاه پرداخت</a></div>
+</nav>
+<header style="padding-top:20px">
+  <img class="faravahar" src="faravahar.svg" alt="فروهر">
+  <img id="logo" src="" alt="logo">
+  <h1><span id="name">Ostad</span> – نمونه کارهای ارز دیجیتال</h1>
+  <p>مجموعه توکن‌های شبکه BNB Smart Chain</p>
+  <p style="font-size:.85rem;opacity:.8;margin-top:6px">«به راستی و امانت، به رسم کوروش بزرگ»</p>
+  <div class="meta">
+    <span class="chip">نسخه <b id="version">-</b></span>
+    <span class="chip">تعداد توکن <b id="count">-</b></span>
+    <span class="chip">آخرین بروزرسانی <b id="date">-</b></span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input id="search" type="text" placeholder="جستجو بر اساس نام، نماد یا آدرس...">
+</div>
+
+<div id="status" class="status">در حال بارگذاری...</div>
+<div id="grid" class="grid"></div>
+<div id="toast" class="toast">آدرس کپی شد</div>
+<footer>داده‌ها از توکن‌لیست Ostad بارگذاری می‌شوند</footer>
+<script src="trust.js"></script>
+
+<script>
+const SRC = 'https://raw.githubusercontent.com/iran000bit-netizen/ostad-tokenlistbnb.json/refs/heads/main/ostad-tokenlist-2.json';
+const CHAINS = { 56: 'BNB Chain', 1: 'Ethereum', 137: 'Polygon' };
+let tokens = [];
+
+function render(list) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = list.map(t => `
+    <div class="card">
+      <div class="top">
+        <img src="${t.logoURI}" alt="${t.symbol}" onerror="this.src='https://assets-cdn.trustwallet.com/blockchains/smartchain/info/logo.png'">
+        <div><h3>${t.name}</h3><small>${t.symbol}</small></div>
+      </div>
+      <div class="addr" title="کپی" onclick="copy('${t.address}')">${t.address}</div>
+      <div class="info"><span>${CHAINS[t.chainId] || 'Chain ' + t.chainId}</span><span>Decimals: ${t.decimals}</span></div>
+      <div class="links">
+        <a href="https://bscscan.com/token/${t.address}" target="_blank">BscScan</a>
+        <a href="https://pancakeswap.finance/swap?outputCurrency=${t.address}" target="_blank">PancakeSwap</a>
+      </div>
+    </div>`).join('');
+  document.getElementById('status').textContent = list.length ? '' : 'موردی یافت نشد';
+}
+
+function copy(a) {
+  navigator.clipboard.writeText(a).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1500);
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  render(tokens.filter(t => [t.name, t.symbol, t.address].some(v => v.toLowerCase().includes(q))));
+});
+
+fetch(SRC).then(r => r.json()).then(d => {
+  tokens = d.tokens;
+  document.getElementById('logo').src = d.logoURI;
+  document.getElementById('name').textContent = d.name;
+  document.getElementById('version').textContent = `${d.version.major}.${d.version.minor}.${d.version.patch}`;
+  document.getElementById('count').textContent = tokens.length;
+  document.getElementById('date').textContent = new Date(d.timestamp).toLocaleDateString('fa-IR');
+  render(tokens);
+}).catch(() => document.getElementById('status').textContent = 'خطا در بارگذاری داده‌ها');
+</script>
+</body>
+</html>
