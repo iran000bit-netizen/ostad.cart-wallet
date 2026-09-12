@@ -41,6 +41,19 @@
   .steps { list-style:none; margin-top:10px; } .steps li { color:var(--muted); font-size:.85rem; padding:6px 0; }
   .steps li::before { content:'✓ '; color:var(--ok); }
   .wallets { margin-top:24px; }
+  .rv-list { display:grid; gap:10px; }
+  .rv { border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:rgba(0,0,0,.18); }
+  .rv .hd { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rv .nm { font-weight:700; }
+  .rv .st { color:var(--accent); letter-spacing:1px; }
+  .rv .tx { display:block; margin-top:6px; font-family:monospace; font-size:.72rem; direction:ltr; text-align:left; color:var(--muted); text-decoration:none; word-break:break-all; }
+  .rv .tx:hover { color:var(--accent); }
+  .rv .ok { font-size:.7rem; color:var(--ok); }
+  .rv p { margin-top:6px; font-size:.9rem; line-height:1.7; }
+  .rv-stars { display:flex; gap:4px; font-size:1.8rem; direction:ltr; justify-content:flex-end; cursor:pointer; }
+  .rv-stars span { color:var(--muted); transition:.15s; }
+  .rv-stars span.on { color:var(--accent); text-shadow:0 0 10px rgba(212,175,55,.6); }
+  textarea, select { width:100%; background:rgba(0,0,0,.25); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:10px; font-family:inherit; font-size:.95rem; outline:none; margin-bottom:12px; }
   .wallet { margin-bottom:14px; } .wallet .tag { font-size:.8rem; color:var(--accent); margin-bottom:6px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--accent); color:#000; padding:10px 20px; border-radius:10px; font-weight:600; opacity:0; transition:.3s; pointer-events:none; }
   .toast.show { opacity:1; }
@@ -171,6 +184,36 @@
       <div id="wdWallets"></div>
       <p class="note">تمام استخرهای نقدینگی کانترکت‌های Ostad به این دو حساب متصل‌اند. تسویه خودکار روی بلاکچین نیازمند اتصال بک‌اند است؛ این صفحه رابط کاربری درگاه را ارائه می‌دهد.</p>
     </div>
+  </div>
+</div>
+
+<div class="wrap" style="grid-template-columns:1fr">
+  <div class="panel" id="reviews">
+    <h2>نظرات مشتریان <small style="color:var(--muted);font-weight:400">(۱۰ نظر آخر – با هش تراکنش تأییدشده)</small></h2>
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat"><small>میانگین رضایت</small><b id="rvAvg">—</b></div>
+      <div class="stat"><small>تعداد نظرات</small><b id="rvCount">0</b></div>
+      <div class="stat"><small>رضایت کامل (۵ ستاره)</small><b id="rvFull">0</b></div>
+    </div>
+    <div id="rvList" class="rv-list"><span style="color:var(--muted)">هنوز نظری ثبت نشده – اولین نظر را شما بنویسید</span></div>
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;color:var(--accent);font-weight:600">ثبت نظر بعد از پرداخت</summary>
+      <label>نام (اختیاری)</label>
+      <input id="rvName" type="text" maxlength="40" placeholder="مثلاً علی از تهران">
+      <label>شبکه تراکنش</label>
+      <select id="rvNet"><option value="bsc">BNB Chain</option><option value="sol">Solana</option></select>
+      <label>هش تراکنش پرداخت (الزامی – روی شبکه بررسی می‌شود)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="rvTx" type="text" placeholder="TxHash / Signature" style="direction:ltr;flex:1">
+        <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('rvTx').value=v})">📷</button>
+      </div>
+      <label>میزان رضایت</label>
+      <div class="rv-stars" id="rvStars"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
+      <label>متن نظر</label>
+      <textarea id="rvText" rows="3" maxlength="300" placeholder="تجربه خرید و دریافت ارز شما…"></textarea>
+      <button class="btn" onclick="submitReview()">ثبت نظر</button>
+      <div id="rvStatus" class="status lock" style="display:none"></div>
+    </details>
   </div>
 </div>
 <div id="toast" class="toast">کپی شد</div>
@@ -531,6 +574,47 @@ function requestWithdraw(){
   alert(`درخواست برداشت سفارش ${order.id} ثبت شد. ${order.amt} ${order.unit} از استخر ${order.pool} به آدرس ${order.dest} ارسال می‌شود.`);
   renderAdmin();
 }
+
+/* ---------- customer reviews (last 10, tx-verified) ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let rvRating = 5;
+function getReviews(){ try{ return JSON.parse(localStorage.getItem('ostadReviews')||'[]'); }catch(e){ return []; } }
+function txLink(n,h){ return n==='sol' ? `https://solscan.io/tx/${h}` : `https://bscscan.com/tx/${h}`; }
+function paintStars(){ document.querySelectorAll('#rvStars span').forEach(s=>s.classList.toggle('on', +s.dataset.v<=rvRating)); }
+function renderReviews(){
+  const all = getReviews(); const last = all.slice(0,10);
+  $('rvCount').textContent = all.length;
+  $('rvFull').textContent = all.filter(r=>r.rating===5).length;
+  $('rvAvg').textContent = all.length ? (all.reduce((s,r)=>s+r.rating,0)/all.length).toFixed(1)+' / 5' : '—';
+  if(!last.length){ $('rvList').innerHTML='<span style="color:var(--muted)">هنوز نظری ثبت نشده – اولین نظر را شما بنویسید</span>'; return; }
+  $('rvList').innerHTML = last.map(r=>`<div class="rv">
+    <div class="hd"><span class="nm">${esc(r.name||'مشتری')}</span><span class="st">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} ${r.rating===5?'– رضایت کامل':''}</span><small style="color:var(--muted)">${new Date(r.t).toLocaleDateString('fa-IR')}</small></div>
+    <p>${esc(r.text)}</p>
+    <a class="tx" href="${txLink(r.net,r.tx)}" target="_blank" rel="noopener">${r.net==='sol'?'Solana':'BSC'} · ${esc(r.tx)}</a>
+    <span class="ok">✓ تراکنش روی شبکه تأیید شد</span>
+  </div>`).join('');
+}
+async function verifyTx(n,h){
+  if(n==='sol'){ const r=await rpc(SOL_RPC,'getSignatureStatuses',[[h],{searchTransactionHistory:true}]); const s=r?.value?.[0]; return !!s && !s.err && (s.confirmationStatus==='confirmed'||s.confirmationStatus==='finalized'); }
+  const r=await rpc(BSC_RPC,'eth_getTransactionReceipt',[h]); return !!r && r.status==='0x1';
+}
+async function submitReview(){
+  const st=$('rvStatus'); st.style.display='block'; st.className='status lock';
+  const tx=$('rvTx').value.trim(), text=$('rvText').value.trim(), n=$('rvNet').value;
+  if(!tx) { st.textContent='هش تراکنش الزامی است'; return; }
+  if(!text) { st.textContent='متن نظر را بنویسید'; return; }
+  if(getReviews().some(r=>r.tx===tx)){ st.textContent='برای این تراکنش قبلاً نظر ثبت شده'; return; }
+  st.textContent='در حال بررسی تراکنش روی شبکه…';
+  let ok=false; try{ ok=await verifyTx(n,tx); }catch(e){}
+  if(!ok){ st.textContent='✗ تراکنش روی شبکه پیدا/تأیید نشد – نظر ثبت نمی‌شود'; return; }
+  const l=getReviews(); l.unshift({name:$('rvName').value.trim().slice(0,40), net:n, tx, rating:rvRating, text:text.slice(0,300), t:Date.now()});
+  localStorage.setItem('ostadReviews', JSON.stringify(l.slice(0,100)));
+  $('rvTx').value=''; $('rvText').value=''; $('rvName').value='';
+  st.className='status ok'; st.textContent='✓ نظر شما ثبت شد – سپاس از اعتماد شما';
+  renderReviews();
+}
+$('rvStars').addEventListener('click', e=>{ if(e.target.dataset.v){ rvRating=+e.target.dataset.v; paintStars(); } });
+paintStars(); renderReviews();
 
 /* ---------- orders store + admin approval ---------- */
 function getOrders(){ try{ return JSON.parse(localStorage.getItem('ostadOrderList')||'[]'); }catch(e){ return []; } }
