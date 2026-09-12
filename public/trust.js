@@ -22,16 +22,23 @@
   .trust{max-width:1100px;margin:30px auto 0;padding:0 20px}
   .trust h2{text-align:center;font-size:1.3rem;margin-bottom:6px;background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
   .trust p{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:22px}
-  .holos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:34px}
-  .holo{position:relative;aspect-ratio:1;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;color:#3a0609;text-decoration:none;
+  .trust details{border:1px solid rgba(212,160,23,.45);border-radius:16px;background:rgba(0,0,0,.18)}
+  .trust summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;font-weight:700;color:var(--accent)}
+  .trust summary::-webkit-details-marker{display:none}
+  .trust summary::after{content:'▼';font-size:.7rem;transition:transform .25s}
+  .trust details[open] summary::after{transform:rotate(180deg)}
+  .trust .body{padding:6px 18px 18px;animation:drop .3s ease}
+  @keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .holos{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:22px}
+  .holo{position:relative;width:96px;height:96px;flex:0 0 96px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;color:#3a0609;text-decoration:none;
     background:conic-gradient(from 0deg,#f9e58a,#d4a017,#fff3b0,#b8860b,#f9e58a,#c9a227,#fff8d6,#d4a017,#f9e58a);
     box-shadow:0 8px 24px rgba(0,0,0,.5),inset 0 0 0 4px rgba(122,20,32,.35),inset 0 0 30px rgba(255,255,255,.35);overflow:hidden;transition:transform .3s}
   .holo::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-100%);animation:shine 3.5s infinite}
-  .holo::after{content:'';position:absolute;inset:10px;border-radius:50%;border:1.5px dashed rgba(122,20,32,.55)}
+  .holo::after{content:'';position:absolute;inset:6px;border-radius:50%;border:1.5px dashed rgba(122,20,32,.55)}
   .holo:hover{transform:scale(1.06) rotate(-2deg)}
-  .holo svg{position:relative;margin-bottom:4px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
-  .holo b{font-size:1.4rem;font-weight:800;letter-spacing:1px;position:relative}
-  .holo small{font-size:.68rem;line-height:1.5;margin-top:4px;position:relative;font-weight:600}
+  .holo svg{position:relative;width:26px;height:26px;margin-bottom:2px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+  .holo b{font-size:.8rem;font-weight:800;letter-spacing:.5px;position:relative}
+  .holo small{font-size:.5rem;line-height:1.3;margin-top:2px;position:relative;font-weight:600}
   @keyframes shine{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
   .exch{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
   .exch a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;text-decoration:none;color:var(--text);border:1px solid rgba(212,160,23,.45);background:linear-gradient(180deg,rgba(90,18,26,.95),rgba(60,10,16,.95));transition:.2s}
@@ -53,11 +60,15 @@
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
   const sec = document.createElement('section'); sec.className = 'trust';
   sec.innerHTML = `
-    <h2>اعتبار و اعتماد</h2>
-    <p>تتر (USDT) در همه صرافی‌های معتبر جهان معامله می‌شود و ذخایر آن به‌صورت دوره‌ای گواهی می‌گردد</p>
-    <div class="holos">${BADGES.map(([t,d,u])=>`<a class="holo" href="${u}" target="_blank" rel="noopener">${t.startsWith('<')?t:`<b>${t}</b>`}<small>${d}</small></a>`).join('')}</div>
-    <p>صرافی‌های معتبر پشتیبان تتر</p>
-    <div class="exch">${EXCHANGES.map(([n,d])=>`<a href="https://${d}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" alt="${n}"><div><span>${n}</span><small>${d}</small></div><i class="verified"></i></a>`).join('')}</div>`;
+    <details>
+      <summary><span>اعتبار و اعتماد – هولوگرام‌ها و صرافی‌های معتبر</span></summary>
+      <div class="body">
+        <p>تتر (USDT) در همه صرافی‌های معتبر جهان معامله می‌شود و ذخایر آن به‌صورت دوره‌ای گواهی می‌گردد</p>
+        <div class="holos">${BADGES.map(([t,d,u])=>`<a class="holo" href="${u}" target="_blank" rel="noopener" title="${d}">${t.startsWith('<')?t:`<b>${t}</b>`}<small>${d}</small></a>`).join('')}</div>
+        <p>صرافی‌های معتبر پشتیبان تتر</p>
+        <div class="exch">${EXCHANGES.map(([n,d])=>`<a href="https://${d}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" alt="${n}"><div><span>${n}</span><small>${d}</small></div><i class="verified"></i></a>`).join('')}</div>
+      </div>
+    </details>`;
   const contact = document.createElement('section'); contact.className = 'contact';
   contact.innerHTML = `<div class="box">
     <h2>پل ارتباطی مستقیم با استاد</h2>
