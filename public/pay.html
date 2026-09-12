@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ostad Pay – درگاه پرداخت ارز دیجیتال</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="vendor/jsQR.js"></script>
 <style>
   :root { --bg:#0b0f1a; --card:#131a2b; --border:#1f2a44; --text:#e6ecff; --muted:#8b97b8; --accent:#f3ba2f; --accent2:#6c8cff; --ok:#3ddc97; }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -226,12 +226,41 @@ async function reserves(pair){
   const [r, t0] = await Promise.all([ call(pair,'0x0902f1ac'), call(pair,'0x0dfe1681') ]);
   return { r0: BigInt('0x'+r.slice(2,66)), r1: BigInt('0x'+r.slice(66,130)), token0: '0x'+t0.slice(-40) };
 }
+/* Solana: derive the Associated Token Account locally (no indexed RPC needed) */
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58decode(s){ let n=0n; for(const c of s){ const i=B58.indexOf(c); if(i<0) throw new Error('bad base58'); n=n*58n+BigInt(i); } const out=[]; while(n>0n){ out.push(Number(n&255n)); n>>=8n; } for(const c of s){ if(c!=='1') break; out.push(0); } return Uint8Array.from(out.reverse()); }
+function b58encode(bytes){ let n=0n; for(const b of bytes) n=(n<<8n)|BigInt(b); let s=''; while(n>0n){ s=B58[Number(n%58n)]+s; n/=58n; } for(const b of bytes){ if(b!==0) break; s='1'+s; } return s; }
+const P25519 = (1n<<255n)-19n, D25519 = 37095705934669439343138083508754565189542113879843219016388785533085940283555n;
+const modpow = (b,e,m)=>{ let r=1n; b%=m; while(e>0n){ if(e&1n) r=r*b%m; b=b*b%m; e>>=1n; } return r; };
+function onCurve(bytes){
+  let y=0n; for(let i=31;i>=0;i--) y=(y<<8n)|BigInt(bytes[i]); y &= (1n<<255n)-1n; if(y>=P25519) return false;
+  const y2=y*y%P25519, u=(y2-1n+P25519)%P25519, v=(D25519*y2+1n)%P25519;
+  const x2 = u*modpow(v,P25519-2n,P25519)%P25519;
+  return x2===0n || modpow(x2,(P25519-1n)/2n,P25519)===1n;
+}
+const sha256Bytes = async(...parts)=>{ const len=parts.reduce((s,p)=>s+p.length,0); const buf=new Uint8Array(len); let o=0; for(const p of parts){ buf.set(p,o); o+=p.length; } return new Uint8Array(await crypto.subtle.digest('SHA-256',buf)); };
+const TOKEN_PROG = b58decode('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), ATA_PROG = b58decode('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+const PDA_MARK = new TextEncoder().encode('ProgramDerivedAddress');
+async function ataAddress(owner, mint){
+  const o=b58decode(owner), m=b58decode(mint);
+  for(let bump=255; bump>=0; bump--){
+    const h = await sha256Bytes(o, TOKEN_PROG, m, Uint8Array.of(bump), ATA_PROG, PDA_MARK);
+    if(!onCurve(h)) return b58encode(h);
+  }
+  throw new Error('no PDA');
+}
 async function solBal(a){
+  const ata = await ataAddress(a, USDT_SOL);
   const [lam, tok] = await Promise.all([
     rpc(SOL_RPC,'getBalance',[a]),
-    rpc(SOL_RPC,'getTokenAccountsByOwner',[a,{mint:USDT_SOL},{encoding:'jsonParsed'}]),
+    rpc(SOL_RPC,'getAccountInfo',[ata,{encoding:'base64'}]),
   ]);
-  const usdt = (tok?.value||[]).reduce((s,x)=>s+(x.account.data.parsed.info.tokenAmount.uiAmount||0),0);
+  let usdt = 0;
+  if(tok?.value?.data?.[0]){
+    const raw = Uint8Array.from(atob(tok.value.data[0]), c=>c.charCodeAt(0));
+    let amt = 0n; for(let i=71;i>=64;i--) amt=(amt<<8n)|BigInt(raw[i]);
+    usdt = Number(amt)/1e6;
+  }
   return { native:(lam?.value||0)/1e9, usdt };
 }
 async function bscBal(a){
