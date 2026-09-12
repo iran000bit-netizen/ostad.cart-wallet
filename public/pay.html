@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ostad Pay – درگاه پرداخت ارز دیجیتال</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="vendor/jsQR.js"></script>
 <style>
   :root { --bg:#0b0f1a; --card:#131a2b; --border:#1f2a44; --text:#e6ecff; --muted:#8b97b8; --accent:#f3ba2f; --accent2:#6c8cff; --ok:#3ddc97; }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -77,7 +78,10 @@
     <label>مبلغ سفارش (USD)</label>
     <input id="amount" type="number" min="1" placeholder="مثلاً 100">
     <label>آدرس کیف‌پول شما (دریافت ارز)</label>
-    <input id="dest" type="text" placeholder="آدرس مقصد در شبکه انتخاب‌شده" style="direction:ltr">
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="dest" type="text" placeholder="آدرس مقصد در شبکه انتخاب‌شده" style="direction:ltr;flex:1">
+      <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('dest').value=v})">📷 اسکن QR</button>
+    </div>
     <label>استخر تغذیه (انتخاب رندوم)</label>
     <div class="pool" id="pool"><span style="color:var(--muted)">در حال بارگذاری استخرها...</span></div>
     <button class="btn ghost" onclick="pickPool()">انتخاب استخر دیگر 🎲</button>
@@ -102,7 +106,10 @@
         <li>زمان تسویه: ۱ تا ۱۵ دقیقه</li>
       </ul>
       <label>۳. تأیید واریز (شرط برداشت)</label>
-      <input id="txhash" type="text" placeholder="هش تراکنش واریز (TxHash / Signature)" style="direction:ltr">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="txhash" type="text" placeholder="هش تراکنش واریز (TxHash / Signature)" style="direction:ltr;flex:1">
+        <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('txhash').value=v})">📷</button>
+      </div>
       <button class="btn ghost" onclick="confirmDeposit()">بررسی و تأیید واریز</button>
       <div id="wdStatus" class="status lock">⚠ برداشت قفل است – منتظر تأیید واریز</div>
       <button class="btn" id="wdBtn" disabled onclick="requestWithdraw()">برداشت / ارسال ارز</button>
@@ -120,6 +127,44 @@
     </div>
 
     <div class="panel wallets">
+      <h2>استخرهای نقدینگی (استعلام زنده PancakeSwap)</h2>
+      <div class="stats">
+        <div class="stat"><small>استخر فعال</small><b id="poolCount">…</b></div>
+        <div class="stat"><small>مجموع نقدینگی</small><b id="poolLiq">…</b></div>
+      </div>
+      <div id="poolTable" style="margin-top:10px"></div>
+      <button class="btn ghost" onclick="loadPoolLiquidity()">بروزرسانی نقدینگی</button>
+    </div>
+
+    <div class="panel wallets">
+      <h2>پنل مدیریت – تأیید برداشت</h2>
+      <div id="adminLoginBox">
+        <label>رمز مدیریت</label>
+        <input id="adminPin" type="password" placeholder="PIN" style="direction:ltr" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button class="btn ghost" onclick="adminLogin()">ورود مدیر</button>
+      </div>
+      <div id="adminBox" style="display:none">
+        <div id="adminList"></div>
+        <div style="display:flex;gap:8px"><button class="btn ghost" onclick="adminChangePin()">تغییر رمز</button><button class="btn ghost" onclick="adminLogout()">خروج</button></div>
+      </div>
+      <p class="note">برداشت فقط وقتی فعال می‌شود که واریز روی شبکه تأیید شده و مدیر سفارش را تأیید کرده باشد.</p>
+    </div>
+
+    <div class="panel wallets">
+      <h2>شارژ کارت NFC</h2>
+      <div class="stats">
+        <div class="stat"><small>وضعیت کارت</small><b id="nfcState">—</b></div>
+        <div class="stat"><small>موجودی کارت (USDT)</small><b id="nfcBal">—</b></div>
+      </div>
+      <label>مبلغ شارژ (USDT)</label>
+      <input id="nfcAmt" type="number" min="1" placeholder="مثلاً 50">
+      <button class="btn ghost" onclick="nfcRead()">📡 خواندن کارت</button>
+      <button class="btn" id="nfcChargeBtn" onclick="nfcCharge()">شارژ کارت</button>
+      <div id="nfcStatus" class="status lock">کارت را نزدیک گوشی نگه دارید</div>
+      <p class="note">Web NFC فقط در Chrome اندروید فعال است. شارژ کارت پس از تأیید واریز سفارش انجام می‌شود؛ داده‌ی کارت (شناسه، موجودی، تاریخچه) به‌صورت NDEF روی کارت نوشته می‌شود.</p>
+    </div>
+
+    <div class="panel wallets">
       <h2>آدرس‌های اصلی واریز و برداشت</h2>
       <div id="mainWallets"></div>
       <h2 style="margin-top:20px">آدرس‌های مستقیم برداشت تتر (Solana)</h2>
@@ -129,6 +174,12 @@
   </div>
 </div>
 <div id="toast" class="toast">کپی شد</div>
+<div id="scanner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <video id="scanVideo" playsinline style="width:min(92vw,420px);border:2px solid var(--accent);border-radius:14px"></video>
+  <canvas id="scanCanvas" style="display:none"></canvas>
+  <div style="color:#fff">QR را در کادر قرار دهید</div>
+  <button class="btn ghost" onclick="stopScan()">بستن</button>
+</div>
 <footer style="text-align:center;color:var(--muted);padding:20px;font-size:.85rem">Ostad Pay – درگاه پرداخت ارز دیجیتال</footer>
 <script src="trust.js"></script>
 
@@ -146,16 +197,70 @@ const WITHDRAW = [
   '92xV4U2PHikZFJWGyBvdBXx5CcGTv3MPNAc6YnFNGFqj',
   '2vJSVAcKjqCQao4XivRdHMGuEaypN8473xYnupEFLJop',
 ].map(a=>({ tag:'Solana USDT', chain:'sol', addr:a }));
-const SOL_RPC = 'https://api.mainnet-beta.solana.com', BSC_RPC = 'https://bsc-dataseed.binance.org';
+const SOL_RPC = ['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://solana.drpc.org'];
+const BSC_RPC = ['https://bsc-rpc.publicnode.com','https://bsc-dataseed.binance.org','https://bsc-dataseed1.defibit.io','https://bsc-dataseed1.ninicoin.io'];
 const USDT_SOL = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', USDT_BSC = '0x55d398326f99059fF775485246999027B3197955';
+const WBNB = '0xbb4CdB9CBd36B01bD1cBaEbF2De08d9173bc095c', BTCB = '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c';
+const PCS_FACTORY = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73';
+const ZERO = '0x0000000000000000000000000000000000000000';
 
-const rpc = (url, method, params) => fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})}).then(r=>r.json()).then(j=>j.result);
+async function rpc(urls, method, params){
+  let err;
+  for(const url of urls){
+    try{
+      const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
+      if(!r.ok) throw new Error(url+' HTTP '+r.status);
+      const j = await r.json();
+      if(j.error) throw new Error(j.error.message);
+      return j.result;
+    }catch(e){ err=e; }
+  }
+  throw err || new Error('RPC unavailable');
+}
+const pad = h => h.replace(/^0x/,'').toLowerCase().padStart(64,'0');
+const call = (to, data) => rpc(BSC_RPC,'eth_call',[{to,data},'latest']);
+const hexN = (h, dec=18) => h && h!=='0x' ? Number(BigInt(h))/10**dec : 0;
+const ercBalance = (token, owner) => call(token, '0x70a08231'+pad(owner));
+const getPair = async (a,b) => { const r = await call(PCS_FACTORY, '0xe6a43905'+pad(a)+pad(b)); return '0x'+r.slice(-40); };
+async function reserves(pair){
+  const [r, t0] = await Promise.all([ call(pair,'0x0902f1ac'), call(pair,'0x0dfe1681') ]);
+  return { r0: BigInt('0x'+r.slice(2,66)), r1: BigInt('0x'+r.slice(66,130)), token0: '0x'+t0.slice(-40) };
+}
+/* Solana: derive the Associated Token Account locally (no indexed RPC needed) */
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58decode(s){ let n=0n; for(const c of s){ const i=B58.indexOf(c); if(i<0) throw new Error('bad base58'); n=n*58n+BigInt(i); } const out=[]; while(n>0n){ out.push(Number(n&255n)); n>>=8n; } for(const c of s){ if(c!=='1') break; out.push(0); } return Uint8Array.from(out.reverse()); }
+function b58encode(bytes){ let n=0n; for(const b of bytes) n=(n<<8n)|BigInt(b); let s=''; while(n>0n){ s=B58[Number(n%58n)]+s; n/=58n; } for(const b of bytes){ if(b!==0) break; s='1'+s; } return s; }
+const P25519 = (1n<<255n)-19n, D25519 = 37095705934669439343138083508754565189542113879843219016388785533085940283555n;
+const modpow = (b,e,m)=>{ let r=1n; b%=m; while(e>0n){ if(e&1n) r=r*b%m; b=b*b%m; e>>=1n; } return r; };
+function onCurve(bytes){
+  let y=0n; for(let i=31;i>=0;i--) y=(y<<8n)|BigInt(bytes[i]); y &= (1n<<255n)-1n; if(y>=P25519) return false;
+  const y2=y*y%P25519, u=(y2-1n+P25519)%P25519, v=(D25519*y2+1n)%P25519;
+  const x2 = u*modpow(v,P25519-2n,P25519)%P25519;
+  return x2===0n || modpow(x2,(P25519-1n)/2n,P25519)===1n;
+}
+const sha256Bytes = async(...parts)=>{ const len=parts.reduce((s,p)=>s+p.length,0); const buf=new Uint8Array(len); let o=0; for(const p of parts){ buf.set(p,o); o+=p.length; } return new Uint8Array(await crypto.subtle.digest('SHA-256',buf)); };
+const TOKEN_PROG = b58decode('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), ATA_PROG = b58decode('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+const PDA_MARK = new TextEncoder().encode('ProgramDerivedAddress');
+async function ataAddress(owner, mint){
+  const o=b58decode(owner), m=b58decode(mint);
+  for(let bump=255; bump>=0; bump--){
+    const h = await sha256Bytes(o, TOKEN_PROG, m, Uint8Array.of(bump), ATA_PROG, PDA_MARK);
+    if(!onCurve(h)) return b58encode(h);
+  }
+  throw new Error('no PDA');
+}
 async function solBal(a){
+  const ata = await ataAddress(a, USDT_SOL);
   const [lam, tok] = await Promise.all([
     rpc(SOL_RPC,'getBalance',[a]),
-    rpc(SOL_RPC,'getTokenAccountsByOwner',[a,{mint:USDT_SOL},{encoding:'jsonParsed'}]),
+    rpc(SOL_RPC,'getAccountInfo',[ata,{encoding:'base64'}]),
   ]);
-  const usdt = (tok?.value||[]).reduce((s,x)=>s+(x.account.data.parsed.info.tokenAmount.uiAmount||0),0);
+  let usdt = 0;
+  if(tok?.value?.data?.[0]){
+    const raw = Uint8Array.from(atob(tok.value.data[0]), c=>c.charCodeAt(0));
+    let amt = 0n; for(let i=71;i>=64;i--) amt=(amt<<8n)|BigInt(raw[i]);
+    usdt = Number(amt)/1e6;
+  }
   return { native:(lam?.value||0)/1e9, usdt };
 }
 async function bscBal(a){
@@ -186,14 +291,118 @@ const NETS = [
 ];
 const DISCOUNT = 0.60; // هر تتر ۶۰٪ کمتر از قیمت لحظه‌ای
 let pools = [], pool = null, net = NETS[0], btcPrice = 0, usdtPrice = 1, order = null;
+let bnbPrice = 0;
+async function onchainPrices(){
+  const [pB, pBtc] = await Promise.all([ getPair(WBNB, USDT_BSC), getPair(BTCB, USDT_BSC) ]);
+  const [rb, rbtc] = await Promise.all([ reserves(pB), reserves(pBtc) ]);
+  const px = (rs, tok) => { const tokIs0 = rs.token0.toLowerCase()===tok.toLowerCase(); const t = tokIs0?rs.r0:rs.r1, u = tokIs0?rs.r1:rs.r0; return Number(u*10000n/t)/10000; };
+  bnbPrice = px(rb, WBNB); return { bnb: bnbPrice, btc: px(rbtc, BTCB) };
+}
 async function loadPrices(){
-  try{ const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether&vs_currencies=usd'); const j=await r.json(); btcPrice=j.bitcoin.usd; usdtPrice=j.tether.usd; }catch(e){}
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether,binancecoin&vs_currencies=usd');
+    if(!r.ok) throw 0;
+    const j=await r.json(); btcPrice=j.bitcoin.usd; usdtPrice=j.tether.usd; bnbPrice=j.binancecoin.usd;
+  }catch(e){
+    try{ const p=await onchainPrices(); btcPrice=p.btc; usdtPrice=1; }catch(e2){}
+  }
+  if(!bnbPrice){ try{ await onchainPrices(); }catch(e){} }
   const eff = usdtPrice*(1-DISCOUNT);
   $('usdtLive').textContent = `$${usdtPrice.toFixed(4)}`; $('usdtEff').textContent = `$${eff.toFixed(4)}`;
   if(btcPrice) $('btcLive').textContent = `$${btcPrice.toLocaleString()}`;
 }
 
 const $ = id => document.getElementById(id);
+/* ---------- QR scanner ---------- */
+let scanStream=null, scanRAF=null, scanCb=null;
+async function scanQR(cb){
+  scanCb=cb;
+  const box=$('scanner'), v=$('scanVideo');
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  }catch(e){ return alert('دسترسی به دوربین ممکن نیست: '+e.message); }
+  v.srcObject=scanStream; await v.play();
+  box.style.display='flex';
+  const det = ('BarcodeDetector' in window) ? new BarcodeDetector({formats:['qr_code']}) : null;
+  const cv=$('scanCanvas'), ctx=cv.getContext('2d');
+  const tick=async()=>{
+    if(!scanStream) return;
+    let text=null;
+    if(v.readyState===v.HAVE_ENOUGH_DATA){
+      if(det){ try{ const r=await det.detect(v); if(r[0]) text=r[0].rawValue; }catch(e){} }
+      else if(window.jsQR){
+        cv.width=v.videoWidth; cv.height=v.videoHeight; ctx.drawImage(v,0,0);
+        const img=ctx.getImageData(0,0,cv.width,cv.height);
+        const r=jsQR(img.data,img.width,img.height); if(r) text=r.data;
+      }
+    }
+    if(text){ onScanned(text); return; }
+    scanRAF=requestAnimationFrame(tick);
+  };
+  tick();
+}
+function onScanned(text){
+  stopScan();
+  // solana:ADDR?amount=..  |  ethereum:0x..@56  |  bitcoin:..  |  plain address
+  let v=text.trim();
+  const m=v.match(/^(?:solana|ethereum|bitcoin|bnb):([^?@]+)/i);
+  if(m) v=m[1];
+  const amt=text.match(/[?&]amount=([\d.]+)/);
+  if(amt && !$('amount').value) $('amount').value=amt[1];
+  scanCb && scanCb(v);
+  toast('QR خوانده شد');
+}
+function stopScan(){
+  if(scanRAF) cancelAnimationFrame(scanRAF); scanRAF=null;
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+  $('scanner').style.display='none';
+}
+
+/* ---------- NFC card charge (Web NFC) ---------- */
+let nfcCard=null;
+function nfcSupported(){ if(!('NDEFReader' in window)){ setNfc('این مرورگر از Web NFC پشتیبانی نمی‌کند (Chrome اندروید لازم است)','lock'); return false; } return true; }
+function setNfc(msg,cls){ const s=$('nfcStatus'); s.textContent=msg; s.className='status '+(cls||'lock'); }
+function parseCard(msg){
+  for(const rec of msg.records){
+    if(rec.recordType==='text' || rec.recordType==='mime'){
+      try{ const d=JSON.parse(new TextDecoder(rec.encoding||'utf-8').decode(rec.data)); if(d && d.ostad) return d; }catch(e){}
+    }
+  }
+  return null;
+}
+async function nfcRead(){
+  if(!nfcSupported()) return;
+  setNfc('در انتظار کارت…');
+  try{
+    const r=new NDEFReader(); await r.scan();
+    r.onreading=ev=>{
+      const c=parseCard(ev.message);
+      nfcCard = c || { ostad:1, id:ev.serialNumber||('card-'+Date.now()), bal:0, tx:[] };
+      $('nfcState').textContent = c ? 'کارت Ostad' : 'کارت خام';
+      $('nfcBal').textContent = nfcCard.bal.toFixed(2);
+      setNfc('کارت خوانده شد: '+nfcCard.id,'ok');
+    };
+    r.onreadingerror=()=>setNfc('خطا در خواندن کارت','lock');
+  }catch(e){ setNfc('خطا: '+e.message,'lock'); }
+}
+async function nfcCharge(){
+  if(!nfcSupported()) return;
+  const a=parseFloat($('nfcAmt').value);
+  if(!(a>0)) return alert('مبلغ شارژ را وارد کنید');
+  if(!order || !order.confirmed || !order.approved) return alert('شارژ کارت فقط پس از تأیید واریز و تأیید مدیریت امکان‌پذیر است');
+  const card = nfcCard || { ostad:1, id:'card-'+Date.now(), bal:0, tx:[] };
+  card.bal = +(card.bal + a).toFixed(2);
+  card.tx = [...(card.tx||[]).slice(-9), { o:order.id, a, t:Date.now() }];
+  setNfc('کارت را برای نوشتن نزدیک نگه دارید…');
+  try{
+    await new NDEFReader().write({ records:[{ recordType:'text', data:JSON.stringify(card) }] });
+    nfcCard=card;
+    $('nfcState').textContent='کارت Ostad'; $('nfcBal').textContent=card.bal.toFixed(2);
+    setNfc('✓ کارت '+a+' USDT شارژ شد','ok');
+  }catch(e){ setNfc('نوشتن ناموفق: '+e.message,'lock'); }
+}
+
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1500); }
 function copy(t){ navigator.clipboard.writeText(t.trim()).then(()=>{ $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'),1500); }); }
 
 function renderNets(){
@@ -201,10 +410,72 @@ function renderNets(){
 }
 function selNet(id){ net = NETS.find(n=>n.id===id); renderNets(); }
 
+/* ---------- pool liquidity (PancakeSwap V2 reserves + treasury token balance) ---------- */
+async function batchCall(calls){
+  const body = calls.map((c,i)=>({jsonrpc:'2.0',id:i,method:'eth_call',params:[{to:c.to,data:c.data},'latest']}));
+  let err;
+  for(const url of BSC_RPC){
+    try{
+      const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json(); if(!Array.isArray(j)) throw new Error('bad batch');
+      const out = []; j.forEach(x=>out[x.id]=x.error?null:x.result); return out;
+    }catch(e){ err=e; }
+  }
+  throw err;
+}
+const fmtUsd = n => '$'+Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+async function loadPoolLiquidity(){
+  if(!pools.length) return;
+  if(!bnbPrice){ try{ await onchainPrices(); }catch(e){} }
+  const q1 = pools.flatMap(p=>[
+    { to:PCS_FACTORY, data:'0xe6a43905'+pad(p.address)+pad(USDT_BSC) },
+    { to:PCS_FACTORY, data:'0xe6a43905'+pad(p.address)+pad(WBNB) },
+    { to:p.address,   data:'0x70a08231'+pad(WALLETS.bsc) },
+  ]);
+  const r1 = await batchCall(q1);
+  const pairs = pools.map((p,i)=>({ usdt:'0x'+(r1[i*3]||'').slice(-40), bnb:'0x'+(r1[i*3+1]||'').slice(-40), held:hexN(r1[i*3+2], p.decimals??18) }));
+  const q2 = []; const idx = [];
+  pairs.forEach((pr,i)=>['usdt','bnb'].forEach(k=>{ if(pr[k] && pr[k]!==ZERO && pr[k].length===42){ idx.push([i,k]); q2.push({to:pr[k],data:'0x0902f1ac'},{to:pr[k],data:'0x0dfe1681'}); } }));
+  const r2 = q2.length ? await batchCall(q2) : [];
+  pools.forEach(p=>{ p.liqUsd=0; p.reserveToken=0; p.pair=null; });
+  idx.forEach(([i,k],n)=>{
+    const res=r2[n*2], t0=r2[n*2+1]; if(!res||!t0||res.length<130) return;
+    const r0=BigInt('0x'+res.slice(2,66)), r1b=BigInt('0x'+res.slice(66,130));
+    const tokIs0 = ('0x'+t0.slice(-40)).toLowerCase()===pools[i].address.toLowerCase();
+    const tokRes = tokIs0?r0:r1b, quoteRes = tokIs0?r1b:r0;
+    const quoteUsd = Number(quoteRes)/1e18 * (k==='bnb' ? (bnbPrice||0) : 1);
+    pools[i].liqUsd += quoteUsd*2;
+    pools[i].reserveToken += Number(tokRes)/10**(pools[i].decimals??18);
+    pools[i].pair = pools[i].pair || pairs[i][k];
+  });
+  pools.forEach((p,i)=>p.held=pairs[i].held);
+  renderPoolTable();
+  if(pool) showPool();
+}
+function renderPoolTable(){
+  const el=$('poolTable'); if(!el) return;
+  const live = pools.filter(p=>p.liqUsd>0).length;
+  $('poolCount').textContent = `${live} / ${pools.length}`;
+  $('poolLiq').textContent = fmtUsd(pools.reduce((s,p)=>s+(p.liqUsd||0),0));
+  el.innerHTML = [...pools].sort((a,b)=>(b.liqUsd||0)-(a.liqUsd||0)).map(p=>`
+    <div class="row" style="gap:8px">
+      <span style="display:flex;align-items:center;gap:8px"><img src="${p.logoURI}" onerror="this.style.display='none'" style="width:22px;height:22px;border-radius:50%"><b>${p.symbol}</b> <small style="color:var(--muted)">${p.name}</small></span>
+      <span style="font-size:.8rem;text-align:left">${p.liqUsd>0?`نقدینگی ${fmtUsd(p.liqUsd)}`:'<span style="color:#f66">بدون استخر</span>'}<br><small style="color:var(--muted)">در خزانه: ${(p.held||0).toLocaleString('en-US',{maximumFractionDigits:2})} ${p.symbol}</small></span>
+    </div>`).join('');
+}
 function pickPool(){
   if(!pools.length) return;
-  pool = pools[Math.floor(Math.random()*pools.length)];
-  $('pool').innerHTML = `<img src="${pool.logoURI}"><div><b>${pool.name}</b> <small style="color:var(--accent)">${pool.symbol}</small><div class="addr">${pool.address}</div></div>`;
+  const live = pools.filter(p=>p.liqUsd>0);
+  if(live.length){
+    const total = live.reduce((s,p)=>s+p.liqUsd,0); let r=Math.random()*total;
+    pool = live.find(p=>(r-=p.liqUsd)<=0) || live[live.length-1];
+  } else pool = pools[Math.floor(Math.random()*pools.length)];
+  showPool();
+}
+function showPool(){
+  const liq = pool.liqUsd>0 ? `نقدینگی: <b style="color:var(--ok)">${fmtUsd(pool.liqUsd)}</b> · ذخیره: ${pool.reserveToken.toLocaleString('en-US',{maximumFractionDigits:2})} ${pool.symbol}` : (pool.liqUsd===0 ? '<span style="color:#f66">استخر PancakeSwap یافت نشد</span>' : 'در حال استعلام نقدینگی…');
+  $('pool').innerHTML = `<img src="${pool.logoURI}" onerror="this.style.display='none'"><div><b>${pool.name}</b> <small style="color:var(--accent)">${pool.symbol}</small><div class="addr">${pool.address}</div><div style="font-size:.78rem;margin-top:4px">${liq}</div></div>`;
 }
 
 async function createOrder(){
@@ -222,7 +493,8 @@ async function createOrder(){
   $('onet').textContent = `${net.name} / ${net.net}`;
   $('oamt').textContent = `${amt} ${unit} (≈ $${usd})`;
   $('orate').textContent = unit==='USDT' ? `1 USDT = $${effUsdt.toFixed(4)} (۶۰٪ کمتر از $${usdtPrice.toFixed(4)})` : `1 BTC = $${btcPrice.toLocaleString()}`;
-  order = { id:$('oid').textContent, confirmed:false };
+  order = { id:$('oid').textContent, net:net.id, usd, amt, unit, dest, pool:pool.symbol, poolAddr:pool.address, confirmed:false, approved:false, tx:null, t:Date.now() };
+  saveOrder(order);
   $('txhash').value=''; $('wdStatus').textContent='⚠ برداشت قفل است – منتظر تأیید واریز'; $('wdStatus').className='status lock'; $('wdBtn').disabled=true;
   $('opool').textContent = pool.symbol;
   $('odest').textContent = dest;
@@ -242,10 +514,59 @@ async function confirmDeposit(){
     if(net.wallet==='sol'){ const r=await rpc(SOL_RPC,'getSignatureStatuses',[[h],{searchTransactionHistory:true}]); const s=r?.value?.[0]; ok=!!s && !s.err && (s.confirmationStatus==='confirmed'||s.confirmationStatus==='finalized'); }
     else { const r=await rpc(BSC_RPC,'eth_getTransactionReceipt',[h]); ok=!!r && r.status==='0x1' && r.to && r.to.toLowerCase()===USDT_BSC.toLowerCase(); }
   }catch(e){}
-  if(ok){ order.confirmed=true; $('wdStatus').textContent='✓ واریز تأیید شد – برداشت فعال است'; $('wdStatus').className='status ok'; $('wdBtn').disabled=false; }
+  if(ok){ order.confirmed=true; order.tx=h; saveOrder(order); refreshWdState(); }
   else { $('wdStatus').textContent='✗ تراکنش تأیید نشد – برداشت قفل می‌ماند'; $('wdStatus').className='status lock'; }
 }
-function requestWithdraw(){ if(!order?.confirmed) return; alert(`درخواست برداشت سفارش ${order.id} ثبت شد. ارز از استخر ${pool.symbol} به آدرس شما ارسال می‌شود.`); }
+function refreshWdState(){
+  const s=$('wdStatus'), b=$('wdBtn');
+  if(!order){ return; }
+  const saved = getOrders().find(o=>o.id===order.id); if(saved) order.approved = saved.approved;
+  if(order.confirmed && order.approved){ s.textContent='✓ واریز تأیید شد و مدیریت تأیید کرد – موجودی قابل برداشت است'; s.className='status ok'; b.disabled=false; }
+  else if(order.confirmed){ s.textContent='⏳ واریز روی شبکه تأیید شد – منتظر تأیید مدیریت'; s.className='status lock'; b.disabled=true; }
+  else { s.textContent='⚠ برداشت قفل است – منتظر تأیید واریز'; s.className='status lock'; b.disabled=true; }
+}
+function requestWithdraw(){
+  if(!order?.confirmed || !order?.approved) return;
+  order.withdrawn=true; saveOrder(order);
+  alert(`درخواست برداشت سفارش ${order.id} ثبت شد. ${order.amt} ${order.unit} از استخر ${order.pool} به آدرس ${order.dest} ارسال می‌شود.`);
+  renderAdmin();
+}
+
+/* ---------- orders store + admin approval ---------- */
+function getOrders(){ try{ return JSON.parse(localStorage.getItem('ostadOrderList')||'[]'); }catch(e){ return []; } }
+function saveOrder(o){ const l=getOrders(); const i=l.findIndex(x=>x.id===o.id); if(i>=0) l[i]={...l[i],...o}; else l.unshift(o); localStorage.setItem('ostadOrderList',JSON.stringify(l.slice(0,200))); }
+const ADMIN_HASH_KEY='ostadAdminHash', DEFAULT_ADMIN_HASH='5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5'; // sha256('12345')
+async function sha256(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+let adminOn=false;
+async function adminLogin(){
+  const pin=$('adminPin').value; if(!pin) return;
+  const h=await sha256(pin);
+  if(h!==(localStorage.getItem(ADMIN_HASH_KEY)||DEFAULT_ADMIN_HASH)) return alert('رمز مدیریت نادرست است');
+  adminOn=true; $('adminPin').value=''; $('adminLoginBox').style.display='none'; $('adminBox').style.display='block'; renderAdmin();
+}
+function adminLogout(){ adminOn=false; $('adminBox').style.display='none'; $('adminLoginBox').style.display='block'; }
+async function adminChangePin(){
+  if(!adminOn) return; const p=prompt('رمز جدید مدیریت (حداقل ۶ کاراکتر):'); if(!p||p.length<6) return;
+  localStorage.setItem(ADMIN_HASH_KEY, await sha256(p)); toast('رمز مدیریت تغییر کرد');
+}
+function adminApprove(id, ok){
+  if(!adminOn) return; const l=getOrders(); const o=l.find(x=>x.id===id); if(!o) return;
+  o.approved=ok; o.approvedAt=Date.now(); localStorage.setItem('ostadOrderList',JSON.stringify(l));
+  if(order && order.id===id){ order.approved=ok; refreshWdState(); }
+  renderAdmin();
+}
+function renderAdmin(){
+  if(!adminOn) return;
+  const l=getOrders();
+  const st=o=>o.withdrawn?'<span style="color:var(--muted)">برداشت شد</span>':o.approved?'<span style="color:var(--ok)">تأیید مدیر</span>':o.confirmed?'<span style="color:var(--accent)">منتظر مدیر</span>':'<span style="color:#f66">منتظر واریز</span>';
+  $('adminList').innerHTML = l.length ? l.map(o=>`
+    <div class="row" style="flex-wrap:wrap;gap:6px">
+      <span><b>${o.id}</b><br><small style="color:var(--muted)">${o.amt} ${o.unit} ≈ $${o.usd} · ${o.pool} · ${new Date(o.t).toLocaleString('fa-IR')}</small><br><small class="mono" style="border:0;padding:0;background:none">${o.dest}</small>${o.tx?`<br><small class="mono" style="border:0;padding:0;background:none">tx: ${o.tx}</small>`:''}</span>
+      <span style="display:flex;gap:6px;align-items:center">${st(o)}
+        ${!o.withdrawn ? `<button class="btn ghost" style="margin:0;padding:6px 10px;width:auto" onclick="adminApprove('${o.id}',true)" ${o.confirmed?'':'disabled title="اول واریز روی شبکه تأیید شود"'}>تأیید</button><button class="btn ghost" style="margin:0;padding:6px 10px;width:auto;color:#f66" onclick="adminApprove('${o.id}',false)">رد</button>` : ''}
+      </span>
+    </div>`).join('') : '<p class="note">سفارشی ثبت نشده</p>';
+}
 
 renderNets(); loadPrices(); setInterval(loadPrices, 60000);
 $('mainWallets').innerHTML = MAIN.map(walletHtml).join('');
@@ -253,7 +574,12 @@ $('wdWallets').innerHTML = WITHDRAW.map(walletHtml).join('');
 $('orders').textContent = localStorage.getItem('ostadOrders')||'0';
 loadBalances(); setInterval(loadBalances, 60000);
 const SHOS = { name:'SHOS Token', symbol:'SHOS', address:'0x4995a93d89a47731fb1d750c0092f0e23f505b28', chainId:56, decimals:18, logoURI:'https://raw.githubusercontent.com/iran000bit-netizen/ostad.cart-wallet/main/assets/shos-logo.png' };
-fetch(SRC).then(r=>r.json()).then(d=>{ pools=[SHOS, ...d.tokens]; pickPool(); }).catch(()=>$('pool').textContent='خطا در بارگذاری استخرها');
+fetch(SRC).then(r=>r.json()).then(async d=>{
+  pools=[SHOS, ...d.tokens.filter(t=>t.chainId===56 || !t.chainId)];
+  pickPool();
+  try{ await loadPoolLiquidity(); pickPool(); }catch(e){ $('poolCount').textContent='خطا'; }
+  setInterval(()=>loadPoolLiquidity().catch(()=>{}), 60000);
+}).catch(()=>$('pool').textContent='خطا در بارگذاری استخرها');
 </script>
 </body>
 </html>
