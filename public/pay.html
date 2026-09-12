@@ -149,6 +149,27 @@
       <button class="btn ghost" onclick="loadPoolLiquidity()">بروزرسانی نقدینگی</button>
     </div>
 
+    <div class="panel wallets" id="exchange">
+      <h2>انتقال مستقیم به صرافی‌های داخلی <small style="color:var(--muted);font-weight:400">(سریع – بعد از تأیید مدیر)</small></h2>
+      <label>صرافی مقصد</label>
+      <select id="exName">
+        <option>نوبیتکس (Nobitex)</option><option>والکس (Wallex)</option><option>تبدیل (Tabdeal)</option><option>بیت‌پین (BitPin)</option><option>رمزینکس (Ramzinex)</option><option>اکسیر (Exir)</option><option>او‌ام‌پی‌فینکس (OMPFinex)</option><option>صرافی دیگر</option>
+      </select>
+      <label>شبکه انتقال</label>
+      <select id="exNet"><option value="bsc">USDT – BNB Chain (BEP-20)</option><option value="sol">USDT – Solana (SPL)</option></select>
+      <label>آدرس واریز صرافی (از بخش واریز USDT صرافی کپی کنید)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="exAddr" type="text" placeholder="آدرس کیف‌پول صرافی" style="direction:ltr;flex:1">
+        <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('exAddr').value=v})">📷</button>
+      </div>
+      <label>مبلغ (USDT)</label>
+      <input id="exAmt" type="number" min="1" step="0.01" placeholder="مثلاً 50">
+      <button class="btn" onclick="requestExchangeTransfer()">ثبت انتقال سریع</button>
+      <div id="exStatus" class="status lock" style="display:none"></div>
+      <div id="exList" style="margin-top:10px"></div>
+      <p class="note">انتقال فقط از موجودی سفارش‌های تأییدشده (واریز + تأیید مدیر) انجام می‌شود و با هش تراکنش در همین بخش قابل پیگیری است.</p>
+    </div>
+
     <div class="panel wallets">
       <h2>پنل مدیریت – تأیید برداشت</h2>
       <div id="adminLoginBox">
@@ -616,10 +637,41 @@ async function submitReview(){
 $('rvStars').addEventListener('click', e=>{ if(e.target.dataset.v){ rvRating=+e.target.dataset.v; paintStars(); } });
 paintStars(); renderReviews();
 
+
+/* ---------- direct transfer to Iranian exchanges ---------- */
+function getTransfers(){ try{ return JSON.parse(localStorage.getItem('ostadTransfers')||'[]'); }catch(e){ return []; } }
+function saveTransfers(l){ localStorage.setItem('ostadTransfers',JSON.stringify(l.slice(0,200))); }
+function validAddr(n,a){ return n==='sol' ? /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a) : /^0x[0-9a-fA-F]{40}$/.test(a); }
+function requestExchangeTransfer(){
+  const st=$('exStatus'); st.style.display='block'; st.className='status lock';
+  const n=$('exNet').value, a=$('exAddr').value.trim(), amt=+$('exAmt').value, ex=$('exName').value;
+  if(!validAddr(n,a)) { st.textContent='آدرس صرافی برای این شبکه معتبر نیست'; return; }
+  if(!(amt>0)) { st.textContent='مبلغ را وارد کنید'; return; }
+  const avail = getOrders().filter(o=>o.confirmed&&o.approved&&!o.withdrawn);
+  if(!avail.length){ st.textContent='سفارش تأییدشده‌ای برای انتقال وجود ندارد – ابتدا واریز و تأیید مدیر لازم است'; return; }
+  const id='TR-'+Date.now().toString(36).toUpperCase();
+  const l=getTransfers(); l.unshift({id,ex,net:n,addr:a,amt,status:'pending',t:Date.now(),order:avail[0].id});
+  saveTransfers(l); $('exAddr').value=''; $('exAmt').value='';
+  st.className='status ok'; st.textContent=`✓ درخواست ${id} ثبت شد – پس از تأیید مدیر، ${amt} USDT به ${ex} ارسال می‌شود`;
+  renderTransfers(); renderAdmin();
+}
+function renderTransfers(){
+  const l=getTransfers().slice(0,10);
+  const lab={pending:'<span style="color:var(--accent)">منتظر مدیر</span>',sent:'<span style="color:var(--ok)">ارسال شد</span>',rejected:'<span style="color:#f66">رد شد</span>'};
+  $('exList').innerHTML = l.length ? l.map(t=>`<div class="row" style="flex-wrap:wrap;gap:6px"><span><b>${t.id}</b> · ${esc(t.ex)}<br><small style="color:var(--muted)">${t.amt} USDT · ${t.net==='sol'?'Solana':'BNB Chain'} · ${new Date(t.t).toLocaleString('fa-IR')}</small><br><small class="mono" style="border:0;padding:0;background:none">${esc(t.addr)}</small>${t.tx?`<br><a class="tx" style="font-size:.7rem" href="${txLink(t.net,t.tx)}" target="_blank" rel="noopener">tx: ${esc(t.tx)}</a>`:''}</span><span>${lab[t.status]||t.status}</span></div>`).join('') : '';
+}
+function adminTransfer(id, ok){
+  if(!adminOn) return; const l=getTransfers(); const t=l.find(x=>x.id===id); if(!t) return;
+  if(ok){ const tx=prompt('هش تراکنش ارسال به صرافی را وارد کنید:'); if(!tx) return; t.tx=tx.trim(); t.status='sent'; }
+  else t.status='rejected';
+  t.at=Date.now(); saveTransfers(l); renderTransfers(); renderAdmin();
+}
+renderTransfers();
+
 /* ---------- orders store + admin approval ---------- */
 function getOrders(){ try{ return JSON.parse(localStorage.getItem('ostadOrderList')||'[]'); }catch(e){ return []; } }
 function saveOrder(o){ const l=getOrders(); const i=l.findIndex(x=>x.id===o.id); if(i>=0) l[i]={...l[i],...o}; else l.unshift(o); localStorage.setItem('ostadOrderList',JSON.stringify(l.slice(0,200))); }
-const ADMIN_HASH_KEY='ostadAdminHash', DEFAULT_ADMIN_HASH='5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5'; // sha256('12345')
+const ADMIN_HASH_KEY='ostadAdminHash', DEFAULT_ADMIN_HASH='1435633a65b08f742bcb85c3208d014ab2cdd95b4f68794911abe70882612454';
 async function sha256(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 let adminOn=false;
 async function adminLogin(){
@@ -650,6 +702,12 @@ function renderAdmin(){
         ${!o.withdrawn ? `<button class="btn ghost" style="margin:0;padding:6px 10px;width:auto" onclick="adminApprove('${o.id}',true)" ${o.confirmed?'':'disabled title="اول واریز روی شبکه تأیید شود"'}>تأیید</button><button class="btn ghost" style="margin:0;padding:6px 10px;width:auto;color:#f66" onclick="adminApprove('${o.id}',false)">رد</button>` : ''}
       </span>
     </div>`).join('') : '<p class="note">سفارشی ثبت نشده</p>';
+  const tr=getTransfers().filter(t=>t.status==='pending');
+  if(tr.length) $('adminList').innerHTML += '<h3 style="margin:14px 0 6px;color:var(--accent);font-size:.95rem">انتقال به صرافی – منتظر تأیید</h3>' + tr.map(t=>`
+    <div class="row" style="flex-wrap:wrap;gap:6px">
+      <span><b>${t.id}</b> · ${esc(t.ex)}<br><small style="color:var(--muted)">${t.amt} USDT · ${t.net==='sol'?'Solana':'BNB Chain'} · سفارش ${t.order}</small><br><small class="mono" style="border:0;padding:0;background:none">${esc(t.addr)}</small></span>
+      <span style="display:flex;gap:6px"><button class="btn ghost" style="margin:0;padding:6px 10px;width:auto" onclick="adminTransfer('${t.id}',true)">ارسال شد + هش</button><button class="btn ghost" style="margin:0;padding:6px 10px;width:auto;color:#f66" onclick="adminTransfer('${t.id}',false)">رد</button></span>
+    </div>`).join('');
 }
 
 renderNets(); loadPrices(); setInterval(loadPrices, 60000);
