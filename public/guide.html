@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>راهنمای استفاده – Ostad Pay</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  nav { display:flex; justify-content:space-between; align-items:center; max-width:1100px; margin:0 auto; padding:20px; }
+  nav a { color:var(--muted); text-decoration:none; margin-right:16px; } nav a.active,nav a:hover { color:var(--accent); }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; display: grid; gap: 18px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 22px 24px; }
+  .panel h2 { color: var(--accent); font-size: 1.15rem; margin-bottom: 12px; }
+  .panel ol, .panel ul { padding-right: 20px; line-height: 2; }
+  .panel li b { color: var(--accent); }
+  .note { border-right: 3px solid var(--accent); background: rgba(212,175,55,.08); padding: 10px 14px; border-radius: 8px; font-size: .9rem; margin-top: 12px; }
+  .warn { border-right-color: #ff8a8a; background: rgba(255,80,80,.08); }
+  code { background: rgba(0,0,0,.3); padding: 2px 6px; border-radius: 6px; font-family: monospace; direction: ltr; display: inline-block; }
+  .support { text-align: center; }
+  .support a { color: var(--accent); font-size: 1.15rem; font-weight: 700; text-decoration: none; }
+  .btn { display: inline-block; margin-top: 12px; background: linear-gradient(135deg,var(--accent),#b8860b); color: #2a0808; padding: 10px 22px; border-radius: 12px; font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+<nav>
+  <b>Ostad <span style="color:var(--accent)">Pay</span></b>
+  <div><a href="index.html">نمونه کارها</a><a href="pay.html">درگاه پرداخت</a><a class="active" href="guide.html">راهنما</a></div>
+</nav>
+<header>
+  <img class="faravahar" src="faravahar.svg" alt="فروهر">
+  <h1>راهنمای <span>استفاده</span></h1>
+  <p>نحوه پرداخت، دریافت ارز، تأیید مدیریت، اسکن QR و شارژ کارت NFC</p>
+</header>
+<div class="divider"></div>
+
+<div class="wrap">
+  <div class="panel">
+    <h2>۱. ثبت سفارش و پرداخت</h2>
+    <ol>
+      <li>در <a href="pay.html" style="color:var(--accent)">درگاه پرداخت</a> ارز و شبکه دریافتی را انتخاب کنید: <b>USDT (BNB Chain)</b>، <b>USDT (Solana)</b> یا <b>BTC (Solana)</b>.</li>
+      <li>مبلغ سفارش را به دلار وارد کنید. نرخ تتر <b>۶۰٪ کمتر</b> از قیمت لحظه‌ای محاسبه می‌شود (مثلاً ۱۰۰ دلار ≈ ۲۵۰ تتر).</li>
+      <li>آدرس کیف‌پول خود را وارد کنید یا با دکمه <b>📷 اسکن QR</b> از روی کیف‌پول بخوانید.</li>
+      <li>استخر تغذیه به‌صورت رندوم و بر اساس نقدینگی واقعی PancakeSwap انتخاب می‌شود؛ با «انتخاب استخر دیگر 🎲» می‌توانید تغییر دهید.</li>
+      <li>روی <b>ایجاد فاکتور پرداخت</b> بزنید. فاکتور شامل شماره سفارش، مبلغ، آدرس واریز و QR است.</li>
+      <li>مبلغ را دقیقاً به آدرس واریز فاکتور ارسال کنید، سپس هش تراکنش (TxHash / Signature) را در بخش <b>۳. تأیید واریز</b> وارد یا اسکن کنید و «بررسی و تأیید واریز» را بزنید.</li>
+    </ol>
+    <div class="note">آدرس‌های واریز اصلی: Solana <code>4Ntz9P8MopmZt14BhD2iqAG1XTzWnJfjP9pRuDJpRBLR</code> و BNB Chain <code>0x77787076fCfC8E722F8FaE50814a77DDd98b65be</code></div>
+  </div>
+
+  <div class="panel">
+    <h2>۲. برداشت / دریافت ارز (دو مرحله‌ای)</h2>
+    <ol>
+      <li><b>تأیید شبکه:</b> پس از ثبت هش، تراکنش روی بلاکچین استعلام می‌شود. وضعیت به «واریز روی شبکه تأیید شد – منتظر تأیید مدیریت» تغییر می‌کند.</li>
+      <li><b>تأیید مدیریت:</b> مدیر در «پنل مدیریت – تأیید برداشت» سفارش را تأیید یا رد می‌کند.</li>
+      <li>فقط بعد از هر دو تأیید، دکمه <b>برداشت / ارسال ارز</b> فعال می‌شود و ارز از استخر انتخاب‌شده به آدرس شما ارسال می‌گردد.</li>
+    </ol>
+  </div>
+
+  <div class="panel">
+    <h2>۳. پنل مدیریت (ویژه مدیر)</h2>
+    <ul>
+      <li>در پایین درگاه، رمز مدیریت را وارد و «ورود مدیر» را بزنید. رمز اولیه: <code>12345</code></li>
+      <li>پس از ورود <b>فوراً</b> با دکمه «تغییر رمز» یک رمز جدید (حداقل ۶ کاراکتر) تعیین کنید.</li>
+      <li>لیست سفارش‌ها با مبلغ، استخر، آدرس مقصد و هش تراکنش نمایش داده می‌شود؛ برای هر سفارش «تأیید» یا «رد» بزنید.</li>
+    </ul>
+    <div class="note warn">در نسخه فعلی، سفارش‌ها و تأیید مدیر در همان مرورگر (localStorage) ذخیره می‌شوند؛ برای مدیریت چند‌دستگاهی و امنیت کامل باید بک‌اند متصل شود.</div>
+  </div>
+
+  <div class="panel">
+    <h2>۴. اسکن QR</h2>
+    <ul>
+      <li>دکمه‌های 📷 کنار «آدرس کیف‌پول» و «هش تراکنش» دوربین را باز می‌کنند.</li>
+      <li>آدرس‌های <code>solana:</code>، <code>ethereum:</code>، <code>bitcoin:</code> و پارامتر <code>amount</code> به‌صورت خودکار تشخیص داده می‌شوند.</li>
+      <li>دسترسی دوربین باید در مرورگر مجاز باشد (روی HTTPS کار می‌کند).</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>۵. شارژ کارت NFC</h2>
+    <ul>
+      <li>فقط در <b>Chrome اندروید</b> با NFC روشن کار می‌کند.</li>
+      <li>«📡 خواندن کارت» را بزنید و کارت را نزدیک گوشی نگه دارید تا شناسه و موجودی نمایش داده شود.</li>
+      <li>پس از تأیید شبکه و مدیریتِ سفارش، مبلغ شارژ را وارد و «شارژ کارت» را بزنید؛ موجودی جدید روی کارت (NDEF) نوشته می‌شود.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>۶. موجودی لحظه‌ای و استخرها</h2>
+    <ul>
+      <li>موجودی SOL / BNB / USDT حساب‌های اصلی و پنج آدرس برداشت سولانا مستقیم از RPC شبکه استعلام می‌شود و هر ۶۰ ثانیه بروزرسانی می‌گردد.</li>
+      <li>در «استخرهای نقدینگی» نقدینگی واقعی هر کانترکت در PancakeSwap و مقدار توکن موجود در خزانه نمایش داده می‌شود.</li>
+    </ul>
+  </div>
+
+  <div class="panel support">
+    <h2>پشتیبانی</h2>
+    <p>برای هر سؤال، مشکل در پرداخت یا پیگیری سفارش (شماره سفارش <code>OST-…</code> را ذکر کنید):</p>
+    <p style="margin-top:10px"><a href="mailto:iran000bit@gmail.com?subject=Ostad%20Pay%20-%20پشتیبانی">iran000bit@gmail.com</a></p>
+    <a class="btn" href="pay.html">رفتن به درگاه پرداخت</a>
+  </div>
+</div>
+
+<footer style="text-align:center;color:var(--muted);padding:20px;font-size:.85rem">Ostad Pay – پشتیبانی: <a href="mailto:iran000bit@gmail.com" style="color:var(--accent)">iran000bit@gmail.com</a></footer>
+<script src="trust.js"></script>
+</body>
+</html>
