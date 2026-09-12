@@ -1,0 +1,64 @@
+/* Ostad – Achaemenid crimson & gold theme */
+:root {
+  --bg: #2a0508;
+  --bg2: #3d0a10;
+  --card: #4a0d13;
+  --border: #b8860b;
+  --text: #f7e7c1;
+  --muted: #d4b98a;
+  --accent: #ffd66b;
+  --accent2: #e6b84a;
+  --ok: #8fe3a0;
+  --gold: linear-gradient(135deg,#f9e58a 0%,#d4a017 45%,#fff3b0 55%,#b8860b 100%);
+}
+body {
+  background:
+    radial-gradient(900px 500px at 50% -10%, #7a1420 0%, transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255,214,107,.035) 0 2px, transparent 2px 14px),
+    linear-gradient(180deg, var(--bg2), var(--bg));
+  color: var(--text);
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23ffd66b' stroke-opacity='.06' stroke-width='2'><path d='M60 10 l12 24 26 4 -19 18 5 26 -24 -12 -24 12 5 -26 -19 -18 26 -4z'/><circle cx='60' cy='60' r='50'/></g></svg>") repeat;
+}
+body > * { position: relative; z-index: 1; }
+
+/* Gold frieze borders (Persepolis-inspired) */
+nav, header { position: relative; }
+header::after {
+  content: ''; display: block; height: 14px; margin: 24px auto 0; max-width: 1100px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='14' viewBox='0 0 56 14'><path d='M0 7 Q7 0 14 7 T28 7 T42 7 T56 7' fill='none' stroke='%23d4a017' stroke-width='1.6'/><circle cx='14' cy='7' r='2' fill='%23ffd66b'/><circle cx='42' cy='7' r='2' fill='%23ffd66b'/></svg>") repeat-x center;
+}
+header h1 { font-family: 'Vazirmatn', serif; letter-spacing: .5px; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+header h1 span, .top small, .panel h2, .rate b, .wallet .tag, nav a.active, nav a:hover, .chip b {
+  background: var(--gold); -webkit-background-clip: text; background-clip: text; color: transparent !important;
+}
+header img { border-color: var(--accent2); box-shadow: 0 0 40px rgba(212,160,23,.5); }
+.faravahar { display:block; width: 140px; margin: 0 auto 6px; opacity: .95; filter: drop-shadow(0 4px 14px rgba(212,160,23,.5)); }
+header p, .toolbar input::placeholder { color: var(--muted); }
+
+.card, .panel, .chip, .stat, .pool, .net, .toolbar input, input, select, .mono, .addr, .links a, .rate {
+  background: linear-gradient(180deg, rgba(90,18,26,.95), rgba(60,10,16,.95));
+  border-color: rgba(212,160,23,.45);
+  color: var(--text);
+}
+.card, .panel {
+  box-shadow: 0 8px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,214,107,.08);
+  border: 1px solid rgba(212,160,23,.55);
+  outline: 3px double rgba(212,160,23,.25); outline-offset: -8px;
+}
+.card:hover { border-color: var(--accent); box-shadow: 0 12px 40px rgba(212,160,23,.25); }
+.net.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,214,107,.35), 0 0 20px rgba(212,160,23,.3); }
+.btn { background: var(--gold); color: #3a0609; box-shadow: 0 6px 18px rgba(212,160,23,.35); }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid rgba(212,160,23,.6); }
+.btn.ghost:hover { background: rgba(212,160,23,.12); }
+.links a { color: var(--accent); } .links a:hover { background: var(--accent2); color: #3a0609; }
+.stat b, .bal, .status.ok { color: var(--ok); }
+.row { border-bottom-color: rgba(212,160,23,.3); }
+.toast { background: var(--gold); color: #3a0609; }
+footer { color: var(--muted); }
+footer::before { content: '𐎧𐏁𐎠𐎹𐎰𐎡𐎹  ·  '; opacity: .6; }
+.qr canvas { border: 3px solid var(--accent2); }
