@@ -6,6 +6,7 @@
 <title>Ostad Pay – درگاه پرداخت ارز دیجیتال</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
   :root { --bg:#0b0f1a; --card:#131a2b; --border:#1f2a44; --text:#e6ecff; --muted:#8b97b8; --accent:#f3ba2f; --accent2:#6c8cff; --ok:#3ddc97; }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -77,7 +78,10 @@
     <label>مبلغ سفارش (USD)</label>
     <input id="amount" type="number" min="1" placeholder="مثلاً 100">
     <label>آدرس کیف‌پول شما (دریافت ارز)</label>
-    <input id="dest" type="text" placeholder="آدرس مقصد در شبکه انتخاب‌شده" style="direction:ltr">
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="dest" type="text" placeholder="آدرس مقصد در شبکه انتخاب‌شده" style="direction:ltr;flex:1">
+      <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('dest').value=v})">📷 اسکن QR</button>
+    </div>
     <label>استخر تغذیه (انتخاب رندوم)</label>
     <div class="pool" id="pool"><span style="color:var(--muted)">در حال بارگذاری استخرها...</span></div>
     <button class="btn ghost" onclick="pickPool()">انتخاب استخر دیگر 🎲</button>
@@ -102,7 +106,10 @@
         <li>زمان تسویه: ۱ تا ۱۵ دقیقه</li>
       </ul>
       <label>۳. تأیید واریز (شرط برداشت)</label>
-      <input id="txhash" type="text" placeholder="هش تراکنش واریز (TxHash / Signature)" style="direction:ltr">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="txhash" type="text" placeholder="هش تراکنش واریز (TxHash / Signature)" style="direction:ltr;flex:1">
+        <button class="btn ghost" type="button" style="white-space:nowrap;margin:0" onclick="scanQR(v=>{$('txhash').value=v})">📷</button>
+      </div>
       <button class="btn ghost" onclick="confirmDeposit()">بررسی و تأیید واریز</button>
       <div id="wdStatus" class="status lock">⚠ برداشت قفل است – منتظر تأیید واریز</div>
       <button class="btn" id="wdBtn" disabled onclick="requestWithdraw()">برداشت / ارسال ارز</button>
@@ -120,6 +127,20 @@
     </div>
 
     <div class="panel wallets">
+      <h2>شارژ کارت NFC</h2>
+      <div class="stats">
+        <div class="stat"><small>وضعیت کارت</small><b id="nfcState">—</b></div>
+        <div class="stat"><small>موجودی کارت (USDT)</small><b id="nfcBal">—</b></div>
+      </div>
+      <label>مبلغ شارژ (USDT)</label>
+      <input id="nfcAmt" type="number" min="1" placeholder="مثلاً 50">
+      <button class="btn ghost" onclick="nfcRead()">📡 خواندن کارت</button>
+      <button class="btn" id="nfcChargeBtn" onclick="nfcCharge()">شارژ کارت</button>
+      <div id="nfcStatus" class="status lock">کارت را نزدیک گوشی نگه دارید</div>
+      <p class="note">Web NFC فقط در Chrome اندروید فعال است. شارژ کارت پس از تأیید واریز سفارش انجام می‌شود؛ داده‌ی کارت (شناسه، موجودی، تاریخچه) به‌صورت NDEF روی کارت نوشته می‌شود.</p>
+    </div>
+
+    <div class="panel wallets">
       <h2>آدرس‌های اصلی واریز و برداشت</h2>
       <div id="mainWallets"></div>
       <h2 style="margin-top:20px">آدرس‌های مستقیم برداشت تتر (Solana)</h2>
@@ -129,6 +150,12 @@
   </div>
 </div>
 <div id="toast" class="toast">کپی شد</div>
+<div id="scanner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <video id="scanVideo" playsinline style="width:min(92vw,420px);border:2px solid var(--accent);border-radius:14px"></video>
+  <canvas id="scanCanvas" style="display:none"></canvas>
+  <div style="color:#fff">QR را در کادر قرار دهید</div>
+  <button class="btn ghost" onclick="stopScan()">بستن</button>
+</div>
 <footer style="text-align:center;color:var(--muted);padding:20px;font-size:.85rem">Ostad Pay – درگاه پرداخت ارز دیجیتال</footer>
 <script src="trust.js"></script>
 
@@ -194,6 +221,96 @@ async function loadPrices(){
 }
 
 const $ = id => document.getElementById(id);
+/* ---------- QR scanner ---------- */
+let scanStream=null, scanRAF=null, scanCb=null;
+async function scanQR(cb){
+  scanCb=cb;
+  const box=$('scanner'), v=$('scanVideo');
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  }catch(e){ return alert('دسترسی به دوربین ممکن نیست: '+e.message); }
+  v.srcObject=scanStream; await v.play();
+  box.style.display='flex';
+  const det = ('BarcodeDetector' in window) ? new BarcodeDetector({formats:['qr_code']}) : null;
+  const cv=$('scanCanvas'), ctx=cv.getContext('2d');
+  const tick=async()=>{
+    if(!scanStream) return;
+    let text=null;
+    if(v.readyState===v.HAVE_ENOUGH_DATA){
+      if(det){ try{ const r=await det.detect(v); if(r[0]) text=r[0].rawValue; }catch(e){} }
+      else if(window.jsQR){
+        cv.width=v.videoWidth; cv.height=v.videoHeight; ctx.drawImage(v,0,0);
+        const img=ctx.getImageData(0,0,cv.width,cv.height);
+        const r=jsQR(img.data,img.width,img.height); if(r) text=r.data;
+      }
+    }
+    if(text){ onScanned(text); return; }
+    scanRAF=requestAnimationFrame(tick);
+  };
+  tick();
+}
+function onScanned(text){
+  stopScan();
+  // solana:ADDR?amount=..  |  ethereum:0x..@56  |  bitcoin:..  |  plain address
+  let v=text.trim();
+  const m=v.match(/^(?:solana|ethereum|bitcoin|bnb):([^?@]+)/i);
+  if(m) v=m[1];
+  const amt=text.match(/[?&]amount=([\d.]+)/);
+  if(amt && !$('amount').value) $('amount').value=amt[1];
+  scanCb && scanCb(v);
+  toast('QR خوانده شد');
+}
+function stopScan(){
+  if(scanRAF) cancelAnimationFrame(scanRAF); scanRAF=null;
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+  $('scanner').style.display='none';
+}
+
+/* ---------- NFC card charge (Web NFC) ---------- */
+let nfcCard=null;
+function nfcSupported(){ if(!('NDEFReader' in window)){ setNfc('این مرورگر از Web NFC پشتیبانی نمی‌کند (Chrome اندروید لازم است)','lock'); return false; } return true; }
+function setNfc(msg,cls){ const s=$('nfcStatus'); s.textContent=msg; s.className='status '+(cls||'lock'); }
+function parseCard(msg){
+  for(const rec of msg.records){
+    if(rec.recordType==='text' || rec.recordType==='mime'){
+      try{ const d=JSON.parse(new TextDecoder(rec.encoding||'utf-8').decode(rec.data)); if(d && d.ostad) return d; }catch(e){}
+    }
+  }
+  return null;
+}
+async function nfcRead(){
+  if(!nfcSupported()) return;
+  setNfc('در انتظار کارت…');
+  try{
+    const r=new NDEFReader(); await r.scan();
+    r.onreading=ev=>{
+      const c=parseCard(ev.message);
+      nfcCard = c || { ostad:1, id:ev.serialNumber||('card-'+Date.now()), bal:0, tx:[] };
+      $('nfcState').textContent = c ? 'کارت Ostad' : 'کارت خام';
+      $('nfcBal').textContent = nfcCard.bal.toFixed(2);
+      setNfc('کارت خوانده شد: '+nfcCard.id,'ok');
+    };
+    r.onreadingerror=()=>setNfc('خطا در خواندن کارت','lock');
+  }catch(e){ setNfc('خطا: '+e.message,'lock'); }
+}
+async function nfcCharge(){
+  if(!nfcSupported()) return;
+  const a=parseFloat($('nfcAmt').value);
+  if(!(a>0)) return alert('مبلغ شارژ را وارد کنید');
+  if(!order || !order.confirmed) return alert('شارژ کارت فقط پس از تأیید واریز سفارش امکان‌پذیر است');
+  const card = nfcCard || { ostad:1, id:'card-'+Date.now(), bal:0, tx:[] };
+  card.bal = +(card.bal + a).toFixed(2);
+  card.tx = [...(card.tx||[]).slice(-9), { o:order.id, a, t:Date.now() }];
+  setNfc('کارت را برای نوشتن نزدیک نگه دارید…');
+  try{
+    await new NDEFReader().write({ records:[{ recordType:'text', data:JSON.stringify(card) }] });
+    nfcCard=card;
+    $('nfcState').textContent='کارت Ostad'; $('nfcBal').textContent=card.bal.toFixed(2);
+    setNfc('✓ کارت '+a+' USDT شارژ شد','ok');
+  }catch(e){ setNfc('نوشتن ناموفق: '+e.message,'lock'); }
+}
+
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1500); }
 function copy(t){ navigator.clipboard.writeText(t.trim()).then(()=>{ $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'),1500); }); }
 
 function renderNets(){
