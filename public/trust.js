@@ -39,6 +39,15 @@
   .exch img{width:28px;height:28px;border-radius:6px;background:#fff;padding:2px}
   .exch span{font-weight:600;font-size:.9rem}
   .exch small{display:block;color:var(--muted);font-size:.7rem}
+  .contact{max-width:1100px;margin:34px auto 0;padding:0 20px}
+  .contact .box{border:1px solid rgba(212,160,23,.55);border-radius:18px;padding:22px;text-align:center;background:linear-gradient(180deg,rgba(90,18,26,.95),rgba(60,10,16,.95));box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .contact h2{font-size:1.3rem;margin-bottom:6px;background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .contact p{color:var(--muted);font-size:.85rem}
+  .contact .links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  .contact .links a{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:12px;font-weight:700;text-decoration:none;transition:.2s}
+  .contact .links a.primary{background:linear-gradient(135deg,#f9e58a,#d4a017);color:#2a0808}
+  .contact .links a.ghost{border:1px solid var(--accent);color:var(--accent)}
+  .contact .links a:hover{transform:translateY(-3px)}
   .verified{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:auto;box-shadow:0 0 8px var(--ok)}
   `;
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
@@ -49,6 +58,14 @@
     <div class="holos">${BADGES.map(([t,d,u])=>`<a class="holo" href="${u}" target="_blank" rel="noopener">${t.startsWith('<')?t:`<b>${t}</b>`}<small>${d}</small></a>`).join('')}</div>
     <p>صرافی‌های معتبر پشتیبان تتر</p>
     <div class="exch">${EXCHANGES.map(([n,d])=>`<a href="https://${d}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" alt="${n}"><div><span>${n}</span><small>${d}</small></div><i class="verified"></i></a>`).join('')}</div>`;
+  const contact = document.createElement('section'); contact.className = 'contact';
+  contact.innerHTML = `<div class="box">
+    <h2>پل ارتباطی مستقیم با استاد</h2>
+    <p>پلتفرم رسمی استاد و پشتیبانی مستقیم – برای خرید، پیگیری سفارش و همکاری</p>
+    <div class="links">
+      <a class="primary" href="https://ostad001bit.lovable.app" target="_blank" rel="noopener">🏛 پلتفرم استاد – ostad001bit.lovable.app</a>
+      <a class="ghost" href="mailto:iran000bit@gmail.com?subject=Ostad%20Pay">✉ iran000bit@gmail.com</a>
+    </div></div>`;
   const footer = document.querySelector('footer');
-  footer ? footer.before(sec) : document.body.appendChild(sec);
+  footer ? footer.before(sec, contact) : document.body.append(sec, contact);
 })();
