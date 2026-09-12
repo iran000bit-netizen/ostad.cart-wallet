@@ -62,3 +62,9 @@ header p, .toolbar input::placeholder { color: var(--muted); }
 footer { color: var(--muted); }
 footer::before { content: '𐎧𐏁𐎠𐎹𐎰𐎡𐎹  ·  '; opacity: .6; }
 .qr canvas { border: 3px solid var(--accent2); }
+.medal { display:block; width:200px; height:200px; border-radius:50%; margin:0 auto 14px; object-fit:cover;
+  box-shadow:0 0 0 4px rgba(212,160,23,.9), 0 0 0 8px rgba(122,20,32,.9), 0 14px 40px rgba(0,0,0,.6), 0 0 60px rgba(212,160,23,.35);
+  animation: medalGlow 4s ease-in-out infinite; }
+@keyframes medalGlow { 0%,100%{ box-shadow:0 0 0 4px rgba(212,160,23,.9),0 0 0 8px rgba(122,20,32,.9),0 14px 40px rgba(0,0,0,.6),0 0 40px rgba(212,160,23,.3) } 50%{ box-shadow:0 0 0 4px rgba(249,229,138,1),0 0 0 8px rgba(122,20,32,.9),0 14px 40px rgba(0,0,0,.6),0 0 80px rgba(212,160,23,.6) } }
+nav b::before { content:''; display:inline-block; width:26px; height:26px; border-radius:50%; background:url(ostad-medal.jpg) center/cover; vertical-align:middle; margin-inline-end:8px; box-shadow:0 0 0 1.5px var(--accent); }
+@media (max-width:600px){ .medal{ width:150px; height:150px } }
